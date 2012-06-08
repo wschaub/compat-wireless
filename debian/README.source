@@ -1,0 +1,38 @@
+compat-wireless for Debian
+--------------------------
+
+This package needs a little manual intervention to build from source.
+it needs to be built natively on an Efika MX running the version of the
+kernel you want to compile against. 
+
+Go somewhere (not the source directory) and type:
+git clone git://github.com/genesi/linux-legacy.git
+
+There are two ways to proceed:
+
+#The SHORT way: (if you have the linux-headers package installed for your kernel already)
+type the following as root:
+cp -r linux-legacy/arch/arm/plat-mxc/include /usr/src/linux-headers-`uname -r`/arch/arm/plat-mxc/ 
+ln -s /usr/src/linux-headers-`uname -r` /usr/src/linux
+then carry on with the rest of the build instructions.
+#End of the SHORT way
+
+#The LONG way:
+next cd to the linux-legacy directory and type the following as root:
+
+rm -f /usr/src/linux /lib/modules/`uname -r`/build /lib/modules/`uname -r`/source
+ln -s `pwd` /usr/src/linux 
+ln -s `pwd` /lib/modules/`uname -r`/build
+ln -s `pwd` /lib/modules/`uname -r`/source
+
+Run the rest as a normal user:
+kernel build instructions with make-kpkg here
+#This is the end of the LONG way
+
+#The rest of the build directions start here:
+go back to the source directory for this package (one level up from where this file is located) and type debian/rules update
+This will cause the control file to be updated for the correct kernel version. The rest is just running dpkg-buildpackage -us -uc (or -b -us -uc if you don't want a source package)
+
+If you checked out using git instead of apt-get source then you want to use git-buildpackage instead of dpkg-buildpackage
+
+The most recent version of this package can always be found at github.com/wschaub/compat-wireless

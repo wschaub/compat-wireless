@@ -1,0 +1,5 @@
+compat-wireless (2012.05.10-1) unstable; urgency=low
+
+  * Initial release with only the ralink drivers enabled.
+
+ -- William Schaub <william.schaub@genesi-usa.com>  Thu, 07 Jun 2012 21:49:59 -0400

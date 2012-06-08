@@ -1,0 +1,49 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+#Set up environment to handle renaming the main package based on uname -r
+KVERS=$(shell uname -r)
+PACKAGE=compat-wireless-$(KVERS)
+
+#This rule should be run every time you build for a new kernel
+#This package only works building natively against the installed kernel
+update: 
+	cat debian/control.in | sed -s 's/KVERS/$(KVERS)/' >debian/control
+
+
+override_dh_auto_configure:
+#Select only ralink drivers for now.
+	scripts/driver-select rt2x00
+override_dh_strip:
+	dh_strip
+#Manually strip the debug symbols out of the kernel modules in the package
+#this seems to get done automagically on unstable but not on squeeze
+	find $(shell pwd)/debian/$(PACKAGE)/ | grep \.ko | xargs strip -d
+
+override_dh_auto_install:
+#Create enough initial directories inside of the pakage build dir
+#for make install to work.
+	mkdir -p debian/$(PACKAGE)/usr/sbin
+	mkdir -p debian/$(PACKAGE)/lib/modules/$(shell uname -r)
+#Force make install to place the modules inside our package.
+	dh_auto_install -- INSTALL_MOD_PATH=$(shell pwd)/debian/$(PACKAGE)/
+#delete useless files created by the make file, these files
+#are also owned by linux-image so we can't be installable if we keep
+#tem around.
+	rm -f $(shell pwd)/debian/$(PACKAGE)/lib/modules/$(shell uname -r)/modules.*
+#These udev rules + script have to go into the package otherwise
+#The drivers will not be able to load their firmware.
+	mkdir -p $(shell pwd)/debian/$(PACKAGE)/lib/udev/ $(shell pwd)/debian/$(PACKAGE)/lib/udev/rules.d/
+	cp udev/compat_firmware.sh $(shell pwd)/debian/$(PACKAGE)/lib/udev/
+	cp udev/50-compat_firmware.rules $(shell pwd)/debian/$(PACKAGE)/lib/udev/rules.d/
+
+
+%:
+	dh $@ 

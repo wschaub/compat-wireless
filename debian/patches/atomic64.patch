@@ -1,0 +1,15 @@
+Index: compat-wireless-2012-05-10/compat/compat_atomic.c
+===================================================================
+--- compat-wireless-2012-05-10.orig/compat/compat_atomic.c	2012-06-07 22:01:01.886660680 -0400
++++ compat-wireless-2012-05-10/compat/compat_atomic.c	2012-06-07 22:01:43.446657047 -0400
+@@ -1,8 +1,8 @@
+ #include <linux/spinlock.h>
+ #include <linux/module.h>
+ 
+-#if !((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31)) && (defined(CONFIG_UML) || defined(CONFIG_X86))) && !((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)) && defined(CONFIG_ARM) && !defined(CONFIG_GENERIC_ATOMIC64))
+-
++//#if !((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31)) && (defined(CONFIG_UML) || defined(CONFIG_X86))) && !((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)) && defined(CONFIG_ARM) && !defined(CONFIG_GENERIC_ATOMIC64))
++#if 0
+ static DEFINE_SPINLOCK(lock);
+ 
+ long long atomic64_read(const atomic64_t *v)

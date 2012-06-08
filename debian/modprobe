@@ -1,0 +1,3 @@
+#Make sure we don't load the old 2.6.31 wireless driver for the Efika MX
+#when we boot
+blacklist rt2870sta

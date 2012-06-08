@@ -1,0 +1,6 @@
+compat-wireless for Debian
+--------------------------
+
+This is a pretty standard install of compat-wireless in Debian package form
+no configuration should be necessary after installing the package.
+ -- William Schaub <william.schaub@genesi-usa.com>  Thu, 07 Jun 2012 21:49:59 -0400
