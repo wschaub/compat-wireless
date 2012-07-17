@@ -1,1 +1,1 @@
-extend-diff-ignore = "(^|/)(config\.sub|config\.guess|Makefile|Makefile\.bk|modules\.order|compat_autoconf\.h)$
+extend-diff-ignore = "(^|/)(config.\sub|config\.guess|Makefile|Makefile\.bk|modules\.order|compat_autoconf\.h)$"
