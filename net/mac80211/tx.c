@@ -153,7 +153,7 @@ static __le16 ieee80211_duration(struct ieee80211_tx_data *tx,
 
 	/* Don't calculate ACKs for QoS Frames with NoAck Policy set */
 	if (ieee80211_is_data_qos(hdr->frame_control) &&
-	    *(ieee80211_get_qos_ctl(hdr)) | IEEE80211_QOS_CTL_ACK_POLICY_NOACK)
+	    *(ieee80211_get_qos_ctl(hdr)) & IEEE80211_QOS_CTL_ACK_POLICY_NOACK)
 		dur = 0;
 	else
 		/* Time needed to transmit ACK
@@ -413,9 +413,8 @@ ieee80211_tx_h_multicast_ps_buf(struct ieee80211_tx_data *tx)
 
 	if (skb_queue_len(&tx->sdata->bss->ps_bc_buf) >= AP_MAX_BC_BUFFER) {
 #ifdef CONFIG_MAC80211_VERBOSE_PS_DEBUG
-		if (net_ratelimit())
-			printk(KERN_DEBUG "%s: BC TX buffer full - dropping the oldest frame\n",
-			       tx->sdata->name);
+		net_dbg_ratelimited("%s: BC TX buffer full - dropping the oldest frame\n",
+				    tx->sdata->name);
 #endif
 		dev_kfree_skb(skb_dequeue(&tx->sdata->bss->ps_bc_buf));
 	} else
@@ -476,10 +475,8 @@ ieee80211_tx_h_unicast_ps_buf(struct ieee80211_tx_data *tx)
 		if (skb_queue_len(&sta->ps_tx_buf[ac]) >= STA_MAX_TX_BUFFER) {
 			struct sk_buff *old = skb_dequeue(&sta->ps_tx_buf[ac]);
 #ifdef CONFIG_MAC80211_VERBOSE_PS_DEBUG
-			if (net_ratelimit())
-				printk(KERN_DEBUG "%s: STA %pM TX buffer for "
-				       "AC %d full - dropping oldest frame\n",
-				       tx->sdata->name, sta->sta.addr, ac);
+			net_dbg_ratelimited("%s: STA %pM TX buffer for AC %d full - dropping oldest frame\n",
+					    tx->sdata->name, sta->sta.addr, ac);
 #endif
 			dev_kfree_skb(old);
 		} else
@@ -1669,7 +1666,7 @@ netdev_tx_t ieee80211_monitor_start_xmit(struct sk_buff *skb,
 	    skb->len >= len_rthdr + hdrlen + sizeof(rfc1042_header) + 2) {
 		u8 *payload = (u8 *)hdr + hdrlen;
 
-		if (compare_ether_addr(payload, rfc1042_header) == 0)
+		if (ether_addr_equal(payload, rfc1042_header))
 			skb->protocol = cpu_to_be16((payload[6] << 8) |
 						    payload[7]);
 	}
@@ -1702,7 +1699,7 @@ netdev_tx_t ieee80211_monitor_start_xmit(struct sk_buff *skb,
 		    tmp_sdata->vif.type == NL80211_IFTYPE_AP_VLAN ||
 		    tmp_sdata->vif.type == NL80211_IFTYPE_WDS)
 			continue;
-		if (compare_ether_addr(tmp_sdata->vif.addr, hdr->addr2) == 0) {
+		if (ether_addr_equal(tmp_sdata->vif.addr, hdr->addr2)) {
 			sdata = tmp_sdata;
 			break;
 		}
@@ -1744,7 +1741,7 @@ netdev_tx_t ieee80211_subif_start_xmit(struct sk_buff *skb,
 	__le16 fc;
 	struct ieee80211_hdr hdr;
 	struct ieee80211s_hdr mesh_hdr __maybe_unused;
-	struct mesh_path __maybe_unused *mppath = NULL;
+	struct mesh_path __maybe_unused *mppath = NULL, *mpath = NULL;
 	const u8 *encaps_data;
 	int encaps_len, skip_header_bytes;
 	int nh_pos, h_pos;
@@ -1810,8 +1807,11 @@ netdev_tx_t ieee80211_subif_start_xmit(struct sk_buff *skb,
 			goto fail;
 		}
 		rcu_read_lock();
-		if (!is_multicast_ether_addr(skb->data))
-			mppath = mpp_path_lookup(skb->data, sdata);
+		if (!is_multicast_ether_addr(skb->data)) {
+			mpath = mesh_path_lookup(skb->data, sdata);
+			if (!mpath)
+				mppath = mpp_path_lookup(skb->data, sdata);
+		}
 
 		/*
 		 * Use address extension if it is a packet from
@@ -1819,9 +1819,8 @@ netdev_tx_t ieee80211_subif_start_xmit(struct sk_buff *skb,
 		 * is being proxied by a portal (i.e. portal address
 		 * differs from proxied address)
 		 */
-		if (compare_ether_addr(sdata->vif.addr,
-				       skb->data + ETH_ALEN) == 0 &&
-		    !(mppath && compare_ether_addr(mppath->mpp, skb->data))) {
+		if (ether_addr_equal(sdata->vif.addr, skb->data + ETH_ALEN) &&
+		    !(mppath && !ether_addr_equal(mppath->mpp, skb->data))) {
 			hdrlen = ieee80211_fill_mesh_addresses(&hdr, &fc,
 					skb->data, skb->data + ETH_ALEN);
 			rcu_read_unlock();
@@ -1968,12 +1967,10 @@ netdev_tx_t ieee80211_subif_start_xmit(struct sk_buff *skb,
 	if (unlikely(!ieee80211_vif_is_mesh(&sdata->vif) &&
 		     !is_multicast_ether_addr(hdr.addr1) && !authorized &&
 		     (cpu_to_be16(ethertype) != sdata->control_port_protocol ||
-		      compare_ether_addr(sdata->vif.addr, skb->data + ETH_ALEN)))) {
+		      !ether_addr_equal(sdata->vif.addr, skb->data + ETH_ALEN)))) {
 #ifdef CONFIG_MAC80211_VERBOSE_DEBUG
-		if (net_ratelimit())
-			printk(KERN_DEBUG "%s: dropped frame to %pM"
-			       " (unauthorized port)\n", dev->name,
-			       hdr.addr1);
+		net_dbg_ratelimited("%s: dropped frame to %pM (unauthorized port)\n",
+				    dev->name, hdr.addr1);
 #endif
 
 		I802_DEBUG_INC(local->tx_handlers_drop_unauth_port);

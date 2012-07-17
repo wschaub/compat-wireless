@@ -667,6 +667,9 @@ ieee80211_tx_info_clear_status(struct ieee80211_tx_info *info)
  * @RX_FLAG_SHORT_GI: Short guard interval was used
  * @RX_FLAG_NO_SIGNAL_VAL: The signal strength value is not present.
  *	Valid only for data frames (mainly A-MPDU)
+ * @RX_FLAG_HT_GF: This frame was received in a HT-greenfield transmission, if
+ *	the driver fills this value it should add %IEEE80211_RADIOTAP_MCS_HAVE_FMT
+ *	to hw.radiotap_mcs_details to advertise that fact
  */
 enum mac80211_rx_flags {
 	RX_FLAG_MMIC_ERROR	= 1<<0,
@@ -681,6 +684,7 @@ enum mac80211_rx_flags {
 	RX_FLAG_40MHZ		= 1<<10,
 	RX_FLAG_SHORT_GI	= 1<<11,
 	RX_FLAG_NO_SIGNAL_VAL	= 1<<12,
+	RX_FLAG_HT_GF		= 1<<13,
 };
 
 /**
@@ -939,7 +943,7 @@ static inline bool ieee80211_vif_is_mesh(struct ieee80211_vif *vif)
  *	CCMP key if it requires CCMP encryption of management frames (MFP) to
  *	be done in software.
  * @IEEE80211_KEY_FLAG_PUT_IV_SPACE: This flag should be set by the driver
- *	for a CCMP key if space should be prepared for the IV, but the IV
+ *	if space should be prepared for the IV, but the IV
  *	itself should not be generated. Do not set together with
  *	@IEEE80211_KEY_FLAG_GENERATE_IV on the same key.
  */
@@ -1288,6 +1292,11 @@ enum ieee80211_hw_flags {
  *
  * @offchannel_tx_hw_queue: HW queue ID to use for offchannel TX
  *	(if %IEEE80211_HW_QUEUE_CONTROL is set)
+ *
+ * @radiotap_mcs_details: lists which MCS information can the HW
+ *	reports, by default it is set to _MCS, _GI and _BW but doesn't
+ *	include _FMT. Use %IEEE80211_RADIOTAP_MCS_HAVE_* values, only
+ *	adding _BW is supported today.
  */
 struct ieee80211_hw {
 	struct ieee80211_conf conf;
@@ -1309,6 +1318,7 @@ struct ieee80211_hw {
 	u8 max_rx_aggregation_subframes;
 	u8 max_tx_aggregation_subframes;
 	u8 offchannel_tx_hw_queue;
+	u8 radiotap_mcs_details;
 };
 
 /**
@@ -1929,6 +1939,11 @@ enum ieee80211_rate_control_changed {
  *	functional again. If this returns an error, the only way out is
  *	to also unregister the device. If it returns 1, then mac80211
  *	will also go through the regular complete restart on resume.
+ *
+ * @set_wakeup: Enable or disable wakeup when WoWLAN configuration is
+ *	modified. The reason is that device_set_wakeup_enable() is
+ *	supposed to be called when the configuration changes, not only
+ *	in suspend().
  *
  * @add_interface: Called when a netdevice attached to the hardware is
  *	enabled. Because it is not called for monitor mode devices, @start
@@ -2960,6 +2975,7 @@ __le16 ieee80211_ctstoself_duration(struct ieee80211_hw *hw,
  * ieee80211_generic_frame_duration - Calculate the duration field for a frame
  * @hw: pointer obtained from ieee80211_alloc_hw().
  * @vif: &struct ieee80211_vif pointer from the add_interface callback.
+ * @band: the band to calculate the frame duration on
  * @frame_len: the length of the frame.
  * @rate: the rate at which the frame is going to be transmitted.
  *

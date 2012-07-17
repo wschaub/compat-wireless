@@ -533,16 +533,16 @@ static void ieee80211_get_et_stats(struct wiphy *wiphy,
 		sinfo.filled = 0;
 		sta_set_sinfo(sta, &sinfo);
 
-		if (sinfo.filled | STATION_INFO_TX_BITRATE)
+		if (sinfo.filled & STATION_INFO_TX_BITRATE)
 			data[i] = 100000 *
 				cfg80211_calculate_bitrate(&sinfo.txrate);
 		i++;
-		if (sinfo.filled | STATION_INFO_RX_BITRATE)
+		if (sinfo.filled & STATION_INFO_RX_BITRATE)
 			data[i] = 100000 *
 				cfg80211_calculate_bitrate(&sinfo.rxrate);
 		i++;
 
-		if (sinfo.filled | STATION_INFO_SIGNAL_AVG)
+		if (sinfo.filled & STATION_INFO_SIGNAL_AVG)
 			data[i] = (u8)sinfo.signal_avg;
 		i++;
 	} else {
@@ -1093,7 +1093,7 @@ static int ieee80211_add_station(struct wiphy *wiphy, struct net_device *dev,
 	} else
 		sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 
-	if (compare_ether_addr(mac, sdata->vif.addr) == 0)
+	if (ether_addr_equal(mac, sdata->vif.addr))
 		return -EINVAL;
 
 	if (is_multicast_ether_addr(mac))
@@ -2092,6 +2092,9 @@ static int ieee80211_set_bitrate_mask(struct wiphy *wiphy,
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = wdev_priv(dev->ieee80211_ptr);
 	int i, ret;
+
+	if (!ieee80211_sdata_running(sdata))
+		return -ENETDOWN;
 
 	if (local->hw.flags & IEEE80211_HW_HAS_RATE_CONTROL) {
 		ret = drv_set_bitrate_mask(local, sdata, mask);

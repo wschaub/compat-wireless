@@ -92,11 +92,13 @@ CONFIG_BT_HIDP does not build with older kernel versions.
  hidp-objs := core.o sock.o
 --- a/drivers/net/wireless/ti/wl1251/Makefile
 +++ b/drivers/net/wireless/ti/wl1251/Makefile
-@@ -5,6 +5,6 @@ wl1251_sdio-objs	+= sdio.o
+@@ -4,7 +4,7 @@ wl1251_spi-objs		+= spi.o
+ wl1251_sdio-objs	+= sdio.o
  
  obj-$(CONFIG_WL1251)		+= wl1251.o
- obj-$(CONFIG_WL1251_SPI)	+= wl1251_spi.o
+-obj-$(CONFIG_WL1251_SPI)	+= wl1251_spi.o
 -obj-$(CONFIG_WL1251_SDIO)	+= wl1251_sdio.o
++obj-$(CONFIG_COMPAT_WL1251_SPI)+= wl1251_spi.o
 +obj-$(CONFIG_COMPAT_WL1251_SDIO)+= wl1251_sdio.o
  
  ccflags-y += -D__CHECK_ENDIAN__
@@ -154,7 +156,7 @@ CONFIG_BT_HIDP does not build with older kernel versions.
  #else
 --- a/net/bluetooth/rfcomm/sock.c
 +++ b/net/bluetooth/rfcomm/sock.c
-@@ -873,7 +873,7 @@ static int rfcomm_sock_ioctl(struct sock
+@@ -879,7 +879,7 @@ static int rfcomm_sock_ioctl(struct sock
  	err = bt_sock_ioctl(sock, cmd, arg);
  
  	if (err == -ENOIOCTLCMD) {

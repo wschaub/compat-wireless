@@ -784,12 +784,24 @@ static void ath9k_hw_init_qos(struct ath_hw *ah)
 
 u32 ar9003_get_pll_sqsum_dvc(struct ath_hw *ah)
 {
+	struct ath_common *common = ath9k_hw_common(ah);
+	int i = 0;
+
 	REG_CLR_BIT(ah, PLL3, PLL3_DO_MEAS_MASK);
 	udelay(100);
 	REG_SET_BIT(ah, PLL3, PLL3_DO_MEAS_MASK);
 
-	while ((REG_READ(ah, PLL4) & PLL4_MEAS_DONE) == 0)
+	while ((REG_READ(ah, PLL4) & PLL4_MEAS_DONE) == 0) {
+
 		udelay(100);
+
+		if (WARN_ON_ONCE(i >= 100)) {
+			ath_err(common, "PLL4 meaurement not done\n");
+			break;
+		}
+
+		i++;
+	}
 
 	return (REG_READ(ah, PLL3) & SQSUM_DVC_MASK) >> 3;
 }
@@ -1468,6 +1480,9 @@ static bool ath9k_hw_chip_reset(struct ath_hw *ah,
 		return false;
 
 	ah->chip_fullsleep = false;
+
+	if (AR_SREV_9330(ah))
+		ar9003_hw_internal_regulator_apply(ah);
 	ath9k_hw_init_pll(ah, chan);
 	ath9k_hw_set_rfmode(ah, chan);
 
@@ -1702,10 +1717,10 @@ static int ath9k_hw_do_fastcc(struct ath_hw *ah, struct ath9k_channel *chan)
 	 * For AR9462, make sure that calibration data for
 	 * re-using are present.
 	 */
-	if (AR_SREV_9462(ah) && (!ah->caldata ||
-				 !ah->caldata->done_txiqcal_once ||
-				 !ah->caldata->done_txclcal_once ||
-				 !ah->caldata->rtt_hist.num_readings))
+	if (AR_SREV_9462(ah) && (ah->caldata &&
+				 (!ah->caldata->done_txiqcal_once ||
+				  !ah->caldata->done_txclcal_once ||
+				  !ah->caldata->rtt_done)))
 		goto fail;
 
 	ath_dbg(common, RESET, "FastChannelChange for %d -> %d\n",
@@ -1941,7 +1956,6 @@ int ath9k_hw_reset(struct ath_hw *ah, struct ath9k_channel *chan,
 	if (caldata) {
 		caldata->done_txiqcal_once = false;
 		caldata->done_txclcal_once = false;
-		caldata->rtt_hist.num_readings = 0;
 	}
 	if (!ath9k_hw_init_cal(ah, chan))
 		return -EIO;

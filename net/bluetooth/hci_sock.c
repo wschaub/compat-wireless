@@ -894,8 +894,10 @@ drop:
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 static int hci_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int len)
 #else
-static int hci_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, int len)
+static int hci_sock_setsockopt(struct socket *sock, int level, int optname,
+			       char __user *optval, int len)
 #endif
+
 {
 	struct hci_ufilter uf = { .opcode = 0 };
 	struct sock *sk = sock->sk;

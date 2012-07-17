@@ -350,7 +350,7 @@ static struct mesh_path *mpath_lookup(struct mesh_table *tbl, u8 *dst,
 	hlist_for_each_entry_rcu(node, n, bucket, list) {
 		mpath = node->mpath;
 		if (mpath->sdata == sdata &&
-				compare_ether_addr(dst, mpath->dst) == 0) {
+		    ether_addr_equal(dst, mpath->dst)) {
 			if (MPATH_EXPIRED(mpath)) {
 				spin_lock_bh(&mpath->state_lock);
 				mpath->flags &= ~MESH_PATH_ACTIVE;
@@ -519,7 +519,7 @@ int mesh_path_add(u8 *dst, struct ieee80211_sub_if_data *sdata)
 	int err = 0;
 	u32 hash_idx;
 
-	if (compare_ether_addr(dst, sdata->vif.addr) == 0)
+	if (ether_addr_equal(dst, sdata->vif.addr))
 		/* never add ourselves as neighbours */
 		return -ENOTSUPP;
 
@@ -563,7 +563,7 @@ int mesh_path_add(u8 *dst, struct ieee80211_sub_if_data *sdata)
 	hlist_for_each_entry(node, n, bucket, list) {
 		mpath = node->mpath;
 		if (mpath->sdata == sdata &&
-		    compare_ether_addr(dst, mpath->dst) == 0)
+		    ether_addr_equal(dst, mpath->dst))
 			goto err_exists;
 	}
 
@@ -654,7 +654,7 @@ int mpp_path_add(u8 *dst, u8 *mpp, struct ieee80211_sub_if_data *sdata)
 	int err = 0;
 	u32 hash_idx;
 
-	if (compare_ether_addr(dst, sdata->vif.addr) == 0)
+	if (ether_addr_equal(dst, sdata->vif.addr))
 		/* never add ourselves as neighbours */
 		return -ENOTSUPP;
 
@@ -692,7 +692,7 @@ int mpp_path_add(u8 *dst, u8 *mpp, struct ieee80211_sub_if_data *sdata)
 	hlist_for_each_entry(node, n, bucket, list) {
 		mpath = node->mpath;
 		if (mpath->sdata == sdata &&
-		    compare_ether_addr(dst, mpath->dst) == 0)
+		    ether_addr_equal(dst, mpath->dst))
 			goto err_exists;
 	}
 
@@ -886,7 +886,7 @@ int mesh_path_del(u8 *addr, struct ieee80211_sub_if_data *sdata)
 	hlist_for_each_entry(node, n, bucket, list) {
 		mpath = node->mpath;
 		if (mpath->sdata == sdata &&
-		    compare_ether_addr(addr, mpath->dst) == 0) {
+		    ether_addr_equal(addr, mpath->dst)) {
 			__mesh_path_del(tbl, node);
 			goto enddel;
 		}

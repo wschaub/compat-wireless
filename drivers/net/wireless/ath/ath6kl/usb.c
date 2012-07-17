@@ -1037,6 +1037,14 @@ static void ath6kl_usb_stop(struct ath6kl *ar)
 	hif_stop(ar);
 }
 
+static void ath6kl_usb_cleanup_scatter(struct ath6kl *ar)
+{
+	/*
+	 * USB doesn't support it. Just return.
+	 */
+	return;
+}
+
 static const struct ath6kl_hif_ops ath6kl_usb_ops = {
 	.diag_read32 = ath6kl_usb_diag_read32,
 	.diag_write32 = ath6kl_usb_diag_write32,
@@ -1049,6 +1057,7 @@ static const struct ath6kl_hif_ops ath6kl_usb_ops = {
 	.pipe_get_default = ath6kl_usb_get_default_pipe,
 	.pipe_map_service = ath6kl_usb_map_service_pipe,
 	.pipe_get_free_queue_number = ath6kl_usb_get_free_queue_number,
+	.cleanup_scatter = ath6kl_usb_cleanup_scatter,
 };
 
 /* ath6kl usb driver registered functions */
@@ -1182,6 +1191,9 @@ static struct usb_driver ath6kl_usb_driver = {
 	.disconnect = ath6kl_usb_remove,
 	.id_table = ath6kl_usb_ids,
 	.supports_autosuspend = true,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
+	.disable_hub_initiated_lpm = 1,
+#endif
 };
 
 static int ath6kl_usb_init(void)
@@ -1207,3 +1219,6 @@ MODULE_FIRMWARE(AR6004_HW_1_0_DEFAULT_BOARD_DATA_FILE);
 MODULE_FIRMWARE(AR6004_HW_1_1_FIRMWARE_FILE);
 MODULE_FIRMWARE(AR6004_HW_1_1_BOARD_DATA_FILE);
 MODULE_FIRMWARE(AR6004_HW_1_1_DEFAULT_BOARD_DATA_FILE);
+MODULE_FIRMWARE(AR6004_HW_1_2_FIRMWARE_FILE);
+MODULE_FIRMWARE(AR6004_HW_1_2_BOARD_DATA_FILE);
+MODULE_FIRMWARE(AR6004_HW_1_2_DEFAULT_BOARD_DATA_FILE);

@@ -102,7 +102,7 @@ struct sta_info *sta_info_get(struct ieee80211_sub_if_data *sdata,
 				    lockdep_is_held(&local->sta_mtx));
 	while (sta) {
 		if (sta->sdata == sdata &&
-		    compare_ether_addr(sta->sta.addr, addr) == 0)
+		    ether_addr_equal(sta->sta.addr, addr))
 			break;
 		sta = rcu_dereference_check(sta->hnext,
 					    lockdep_is_held(&local->sta_mtx));
@@ -125,7 +125,7 @@ struct sta_info *sta_info_get_bss(struct ieee80211_sub_if_data *sdata,
 	while (sta) {
 		if ((sta->sdata == sdata ||
 		     (sta->sdata->bss && sta->sdata->bss == sdata->bss)) &&
-		    compare_ether_addr(sta->sta.addr, addr) == 0)
+		    ether_addr_equal(sta->sta.addr, addr))
 			break;
 		sta = rcu_dereference_check(sta->hnext,
 					    lockdep_is_held(&local->sta_mtx));
@@ -302,7 +302,7 @@ static int sta_info_insert_check(struct sta_info *sta)
 	if (unlikely(!ieee80211_sdata_running(sdata)))
 		return -ENETDOWN;
 
-	if (WARN_ON(compare_ether_addr(sta->sta.addr, sdata->vif.addr) == 0 ||
+	if (WARN_ON(ether_addr_equal(sta->sta.addr, sdata->vif.addr) ||
 		    is_multicast_ether_addr(sta->sta.addr)))
 		return -EINVAL;
 
@@ -378,7 +378,7 @@ static int sta_info_insert_finish(struct sta_info *sta) __acquires(RCU)
 	/* make the station visible */
 	sta_info_hash_add(local, sta);
 
-	list_add(&sta->list, &local->sta_list);
+	list_add_rcu(&sta->list, &local->sta_list);
 
 	set_sta_flag(sta, WLAN_STA_INSERTED);
 
@@ -688,7 +688,7 @@ int __must_check __sta_info_destroy(struct sta_info *sta)
 	if (ret)
 		return ret;
 
-	list_del(&sta->list);
+	list_del_rcu(&sta->list);
 
 	mutex_lock(&local->key_mtx);
 	for (i = 0; i < NUM_DEFAULT_KEYS; i++)
@@ -912,7 +912,7 @@ struct ieee80211_sta *ieee80211_find_sta_by_ifaddr(struct ieee80211_hw *hw,
 	 */
 	for_each_sta_info(hw_to_local(hw), addr, sta, nxt) {
 		if (localaddr &&
-		    compare_ether_addr(sta->sdata->vif.addr, localaddr) != 0)
+		    !ether_addr_equal(sta->sdata->vif.addr, localaddr))
 			continue;
 		if (!sta->uploaded)
 			return NULL;

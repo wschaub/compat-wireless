@@ -243,7 +243,7 @@ static void bluecard_write_wakeup(bluecard_info_t *info)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36))
 		register unsigned int iobase = info->p_dev->resource[0]->start;
 #else
-		register unsigned int iobase = info->p_dev->io.BasePort1;
+		unsigned int iobase = info->p_dev->io.BasePort1;
 #endif
 		register unsigned int offset;
 		register unsigned char command;

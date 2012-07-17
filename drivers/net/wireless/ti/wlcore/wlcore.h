@@ -243,6 +243,9 @@ struct wl1271 {
 	struct wl1271_scan scan;
 	struct delayed_work scan_complete_work;
 
+	/* Connection loss work */
+	struct delayed_work connection_loss_work;
+
 	bool sched_scanning;
 
 	/* The current band */
@@ -350,6 +353,8 @@ struct wl1271 {
 	/* size of the private FW status data */
 	size_t fw_status_priv_len;
 
+	/* RX Data filter rule state - enabled/disabled */
+	bool rx_filter_enabled[WL1271_MAX_RX_FILTERS];
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 	struct compat_threaded_irq irq_compat;
 #endif

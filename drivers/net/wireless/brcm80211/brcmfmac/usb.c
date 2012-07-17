@@ -28,6 +28,7 @@
 #include <linux/uaccess.h>
 #include <linux/firmware.h>
 #include <linux/usb.h>
+#include <linux/vmalloc.h>
 #include <net/cfg80211.h>
 
 #include <defs.h>
@@ -1239,7 +1240,7 @@ static int brcmf_usb_get_fw(struct brcmf_usbdev_info *devinfo)
 		return -EINVAL;
 	}
 
-	devinfo->image = kmalloc(fw->size, GFP_ATOMIC); /* plus nvram */
+	devinfo->image = vmalloc(fw->size); /* plus nvram */
 	if (!devinfo->image)
 		return -ENOMEM;
 
@@ -1596,13 +1597,16 @@ static struct usb_driver brcmf_usbdrvr = {
 	.id_table = brcmf_usb_devid_table,
 	.suspend = brcmf_usb_suspend,
 	.resume = brcmf_usb_resume,
-	.supports_autosuspend = 1
+	.supports_autosuspend = 1,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
+	.disable_hub_initiated_lpm = 1,
+#endif
 };
 
 void brcmf_usb_exit(void)
 {
 	usb_deregister(&brcmf_usbdrvr);
-	kfree(g_image.data);
+	vfree(g_image.data);
 	g_image.data = NULL;
 	g_image.len = 0;
 }

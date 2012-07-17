@@ -4,7 +4,7 @@ position before.
 
 --- a/net/bluetooth/hci_core.c
 +++ b/net/bluetooth/hci_core.c
-@@ -1740,8 +1740,12 @@ int hci_register_dev(struct hci_dev *hde
+@@ -1740,8 +1740,13 @@ int hci_register_dev(struct hci_dev *hde
  
  	write_unlock(&hci_dev_list_lock);
  
@@ -14,6 +14,7 @@ position before.
 +#else
 +	hdev->workqueue = create_singlethread_workqueue(hdev->name);
 +#endif
++
  	if (!hdev->workqueue) {
  		error = -ENOMEM;
  		goto err;

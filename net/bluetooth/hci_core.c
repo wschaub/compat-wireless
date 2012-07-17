@@ -1746,6 +1746,7 @@ int hci_register_dev(struct hci_dev *hdev)
 #else
 	hdev->workqueue = create_singlethread_workqueue(hdev->name);
 #endif
+
 	if (!hdev->workqueue) {
 		error = -ENOMEM;
 		goto err;
@@ -2166,6 +2167,12 @@ static void hci_queue_acl(struct hci_conn *conn, struct sk_buff_head *queue,
 	struct hci_dev *hdev = conn->hdev;
 	struct sk_buff *list;
 
+	skb->len = skb_headlen(skb);
+	skb->data_len = 0;
+
+	bt_cb(skb)->pkt_type = HCI_ACLDATA_PKT;
+	hci_add_acl_hdr(skb, conn->handle, flags);
+
 	list = skb_shinfo(skb)->frag_list;
 	if (!list) {
 		/* Non fragmented */
@@ -2209,8 +2216,6 @@ void hci_send_acl(struct hci_chan *chan, struct sk_buff *skb, __u16 flags)
 	BT_DBG("%s chan %p flags 0x%x", hdev->name, chan, flags);
 
 	skb->dev = (void *) hdev;
-	bt_cb(skb)->pkt_type = HCI_ACLDATA_PKT;
-	hci_add_acl_hdr(skb, conn->handle, flags);
 
 	hci_queue_acl(conn, &chan->data_q, skb, flags);
 
@@ -2718,6 +2723,14 @@ static inline void hci_acldata_packet(struct hci_dev *hdev, struct sk_buff *skb)
 
 	if (conn) {
 		hci_conn_enter_active_mode(conn, BT_POWER_FORCE_ACTIVE_OFF);
+
+		hci_dev_lock(hdev);
+		if (test_bit(HCI_MGMT, &hdev->dev_flags) &&
+		    !test_and_set_bit(HCI_CONN_MGMT_CONNECTED, &conn->flags))
+			mgmt_device_connected(hdev, &conn->dst, conn->type,
+					      conn->dst_type, 0, NULL, 0,
+					      conn->dev_class);
+		hci_dev_unlock(hdev);
 
 		/* Send to upper protocol */
 		l2cap_recv_acldata(conn, skb, flags);

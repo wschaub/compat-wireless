@@ -13,7 +13,7 @@ suspend and resume that are not backported.
  static int ath6kl_set_sdio_pm_caps(struct ath6kl *ar)
  {
  	struct ath6kl_sdio *ar_sdio = ath6kl_sdio_priv(ar);
-@@ -953,6 +954,17 @@ static int ath6kl_sdio_resume(struct ath
+@@ -956,6 +957,17 @@ static int ath6kl_sdio_resume(struct ath
  
  	return 0;
  }
@@ -31,7 +31,7 @@ suspend and resume that are not backported.
  
  /* set the window address register (using 4-byte register access ). */
  static int ath6kl_set_addrwin_reg(struct ath6kl *ar, u32 reg_addr, u32 addr)
-@@ -1265,7 +1277,7 @@ static const struct ath6kl_hif_ops ath6k
+@@ -1267,7 +1279,7 @@ static const struct ath6kl_hif_ops ath6k
  	.stop = ath6kl_sdio_stop,
  };
  
@@ -40,7 +40,7 @@ suspend and resume that are not backported.
  
  /*
   * Empty handlers so that mmc subsystem doesn't remove us entirely during
-@@ -1415,7 +1427,9 @@ static struct sdio_driver ath6kl_sdio_dr
+@@ -1417,7 +1429,9 @@ static struct sdio_driver ath6kl_sdio_dr
  	.id_table = ath6kl_sdio_devices,
  	.probe = ath6kl_sdio_probe,
  	.remove = ath6kl_sdio_remove,
@@ -151,7 +151,7 @@ suspend and resume that are not backported.
  	int retry = 0;
  	while (atomic_read(&sdiodev->suspend) && retry++ != 30)
  		wait_event_timeout(*wq, false, HZ/100);
-@@ -589,7 +589,7 @@ static void brcmf_ops_sdio_remove(struct
+@@ -563,7 +563,7 @@ static void brcmf_ops_sdio_remove(struct
  	}
  }
  
@@ -160,7 +160,7 @@ suspend and resume that are not backported.
  static int brcmf_sdio_suspend(struct device *dev)
  {
  	mmc_pm_flag_t sdio_flags;
-@@ -639,7 +639,7 @@ static struct sdio_driver brcmf_sdmmc_dr
+@@ -613,7 +613,7 @@ static struct sdio_driver brcmf_sdmmc_dr
  	.remove = brcmf_ops_sdio_remove,
  	.name = "brcmfmac",
  	.id_table = brcmf_sdmmc_ids,
@@ -169,3 +169,31 @@ suspend and resume that are not backported.
  	.drv = {
  		.pm = &brcmf_sdio_pm_ops,
  	},
+--- a/drivers/bluetooth/btmrvl_sdio.c
++++ b/drivers/bluetooth/btmrvl_sdio.c
+@@ -1046,6 +1046,7 @@ static void btmrvl_sdio_remove(struct sd
+ 	}
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34))
+ static int btmrvl_sdio_suspend(struct device *dev)
+ {
+ 	struct sdio_func *func = dev_to_sdio_func(dev);
+@@ -1141,6 +1142,7 @@ static const struct dev_pm_ops btmrvl_sd
+ 	.suspend	= btmrvl_sdio_suspend,
+ 	.resume		= btmrvl_sdio_resume,
+ };
++#endif
+ 
+ static struct sdio_driver bt_mrvl_sdio = {
+ 	.name		= "btmrvl_sdio",
+@@ -1149,7 +1151,9 @@ static struct sdio_driver bt_mrvl_sdio =
+ 	.remove		= btmrvl_sdio_remove,
+ 	.drv = {
+ 		.owner = THIS_MODULE,
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34))
+ 		.pm = &btmrvl_sdio_pm_ops,
++#endif
+ 	}
+ };
+ 

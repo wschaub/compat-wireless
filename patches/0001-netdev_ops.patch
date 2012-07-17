@@ -38,7 +38,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
 
 --- a/drivers/net/usb/rndis_host.c
 +++ b/drivers/net/usb/rndis_host.c
-@@ -355,7 +355,7 @@ generic_rndis_bind(struct usbnet *dev, s
+@@ -358,7 +358,7 @@ generic_rndis_bind(struct usbnet *dev, s
  	dev->rx_urb_size &= ~(dev->maxpacket - 1);
  	u.init->max_transfer_size = cpu_to_le32(dev->rx_urb_size);
  
@@ -49,7 +49,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  	if (unlikely(retval < 0)) {
 --- a/drivers/net/usb/usbnet.c
 +++ b/drivers/net/usb/usbnet.c
-@@ -1388,7 +1388,7 @@ usbnet_probe (struct usb_interface *udev
+@@ -1410,7 +1410,7 @@ usbnet_probe (struct usb_interface *udev
  		net->features |= NETIF_F_HIGHDMA;
  #endif
  
@@ -60,7 +60,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  
 --- a/drivers/net/wireless/ath/ath6kl/main.c
 +++ b/drivers/net/wireless/ath/ath6kl/main.c
-@@ -1207,7 +1207,7 @@ static const struct net_device_ops ath6k
+@@ -1279,7 +1279,7 @@ static const struct net_device_ops ath6k
  
  void init_netdev(struct net_device *dev)
  {
@@ -71,15 +71,15 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  
 --- a/drivers/net/wireless/rndis_wlan.c
 +++ b/drivers/net/wireless/rndis_wlan.c
-@@ -3463,7 +3463,7 @@ static int rndis_wlan_bind(struct usbnet
+@@ -3436,7 +3436,7 @@ static int rndis_wlan_bind(struct usbnet
  	 * rndis_host wants to avoid all OID as much as possible
  	 * so do promisc/multicast handling in rndis_wlan.
  	 */
 -	usbdev->net->netdev_ops = &rndis_wlan_netdev_ops;
 +	netdev_attach_ops(usbdev->net, &rndis_wlan_netdev_ops);
  
- 	tmp = RNDIS_PACKET_TYPE_DIRECTED | RNDIS_PACKET_TYPE_BROADCAST;
- 	retval = rndis_set_oid(usbdev, OID_GEN_CURRENT_PACKET_FILTER, &tmp,
+ 	tmp = cpu_to_le32(RNDIS_PACKET_TYPE_DIRECTED | RNDIS_PACKET_TYPE_BROADCAST);
+ 	retval = rndis_set_oid(usbdev,
 --- a/drivers/net/ethernet/broadcom/b44.c
 +++ b/drivers/net/ethernet/broadcom/b44.c
 @@ -2159,7 +2159,7 @@ static int __devinit b44_init_one(struct
@@ -93,7 +93,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  	dev->irq = sdev->irq;
 --- a/drivers/net/wireless/ipw2x00/ipw2100.c
 +++ b/drivers/net/wireless/ipw2x00/ipw2100.c
-@@ -6116,7 +6116,7 @@ static struct net_device *ipw2100_alloc_
+@@ -6107,7 +6107,7 @@ static struct net_device *ipw2100_alloc_
  	priv->ieee->perfect_rssi = -20;
  	priv->ieee->worst_rssi = -85;
  
@@ -157,7 +157,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  
 --- a/drivers/net/wireless/mac80211_hwsim.c
 +++ b/drivers/net/wireless/mac80211_hwsim.c
-@@ -1290,7 +1290,7 @@ static const struct net_device_ops hwsim
+@@ -1295,7 +1295,7 @@ static const struct net_device_ops hwsim
  
  static void hwsim_mon_setup(struct net_device *dev)
  {
@@ -168,7 +168,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  	dev->tx_queue_len = 0;
 --- a/drivers/net/wireless/mwifiex/main.c
 +++ b/drivers/net/wireless/mwifiex/main.c
-@@ -628,7 +628,7 @@ static const struct net_device_ops mwifi
+@@ -635,7 +635,7 @@ static const struct net_device_ops mwifi
  void mwifiex_init_priv_params(struct mwifiex_private *priv,
  						struct net_device *dev)
  {
@@ -234,7 +234,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  	strncpy(netdev->name, pci_name(pdev), sizeof(netdev->name) - 1);
 --- a/net/mac80211/iface.c
 +++ b/net/mac80211/iface.c
-@@ -827,7 +827,7 @@ static void ieee80211_if_setup(struct ne
+@@ -841,7 +841,7 @@ static void ieee80211_if_setup(struct ne
  {
  	ether_setup(dev);
  	dev->priv_flags &= ~IFF_TX_SKB_SHARING;
@@ -243,7 +243,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  	dev->destructor = free_netdev;
  }
  
-@@ -974,7 +974,7 @@ static void ieee80211_setup_sdata(struct
+@@ -988,7 +988,7 @@ static void ieee80211_setup_sdata(struct
  	/* and set some type-dependent values */
  	sdata->vif.type = type;
  	sdata->vif.p2p = false;
@@ -252,7 +252,7 @@ Date:   Wed Nov 19 21:32:24 2008 -0800
  	sdata->wdev.iftype = type;
  
  	sdata->control_port_protocol = cpu_to_be16(ETH_P_PAE);
-@@ -1015,7 +1015,7 @@ static void ieee80211_setup_sdata(struct
+@@ -1029,7 +1029,7 @@ static void ieee80211_setup_sdata(struct
  		break;
  	case NL80211_IFTYPE_MONITOR:
  		sdata->dev->type = ARPHRD_IEEE80211_RADIOTAP;

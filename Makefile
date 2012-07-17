@@ -70,6 +70,7 @@ $(error "The path to this compat-wireless directory has spaces in it." \
 endif
 
 export CFLAGS += \
+        -DCOMPAT_BASE="\"$(shell cat $(PWD)/.compat_base)\"" \
         -DCOMPAT_BASE_TREE="\"$(shell cat $(PWD)/.compat_base_tree)\"" \
         -DCOMPAT_BASE_TREE_VERSION="\"$(shell cat $(PWD)/.compat_base_tree_version)\"" \
         -DCOMPAT_PROJECT="\"Compat-wireless\"" \
@@ -157,7 +158,6 @@ install-scripts:
 	@install scripts/athenable	$(DESTDIR)/usr/sbin/
 	@install scripts/b43enable	$(DESTDIR)/usr/sbin/
 	@install scripts/iwl-enable	$(DESTDIR)/usr/sbin/
-	@install scripts/alx-enable	$(DESTDIR)/usr/sbin/
 	@install scripts/athload	$(DESTDIR)/usr/sbin/
 	@install scripts/b43load	$(DESTDIR)/usr/sbin/
 	@install scripts/iwl-load	$(DESTDIR)/usr/sbin/
@@ -187,15 +187,6 @@ install-scripts:
 		echo ;\
 		echo Running iwl-enable iwlwifi...;\
 		$(DESTDIR)/usr/sbin/iwl-enable iwlwifi ;\
-	fi
-	@if [ $(shell modinfo atl1c > /dev/null 2>&1 && echo 1) ]; then \
-		echo ;\
-		echo -n "Note: atl1c detected, we're going to disable it. "  ;\
-		echo "If you would like to enable it later you can run:"  ;\
-		echo "    sudo alx-load atl1c"  ;\
-		echo ;\
-		echo Running alx-enable alx...;\
-		$(DESTDIR)/usr/sbin/alx-enable alx;\
 	fi
 	@# If on distributions like Mandriva which like to
 	@# compress their modules this will find out and do
@@ -232,12 +223,14 @@ uninstall:
 	@rm -rf $(KLIB)/$(KMODDIR)/drivers/net/wireless/
 	@rm -rf $(KLIB)/$(KMODDIR)/drivers/staging/
 	@rm -rf $(KLIB)/$(KMODDIR)/drivers/net/atl*
+	@find $(KLIB)/$(KMODDIR)/drivers/net/ -name "alx*.ko" -o -name "atl*.ko" 2>/dev/null |xargs rm -f
 	@# Lets only remove the stuff we are sure we are providing
 	@# on the misc directory.
 	@rm -f $(KLIB)/$(KMODDIR)/drivers/misc/eeprom/eeprom_93cx6.ko*
 	@rm -f $(KLIB)/$(KMODDIR)/drivers/misc/eeprom_93cx6.ko*
 	@rm -f $(KLIB)/$(KMODDIR)/drivers/net/b44.ko*
 	@/sbin/depmod -a
+	@./scripts/update-initramfs
 	@echo 
 
 clean:
