@@ -1220,6 +1220,22 @@ static void ieee80211_sta_wmm_params(struct ieee80211_local *local,
 	sdata->vif.bss_conf.qos = true;
 }
 
+static void __ieee80211_stop_poll(struct ieee80211_sub_if_data *sdata)
+{
+	lockdep_assert_held(&sdata->local->mtx);
+
+	sdata->u.mgd.flags &= ~(IEEE80211_STA_CONNECTION_POLL |
+				IEEE80211_STA_BEACON_POLL);
+	ieee80211_run_deferred_scan(sdata->local);
+}
+
+static void ieee80211_stop_poll(struct ieee80211_sub_if_data *sdata)
+{
+	mutex_lock(&sdata->local->mtx);
+	__ieee80211_stop_poll(sdata);
+	mutex_unlock(&sdata->local->mtx);
+}
+
 static u32 ieee80211_handle_bss_capability(struct ieee80211_sub_if_data *sdata,
 					   u16 capab, bool erp_valid, u8 erp)
 {
@@ -1285,8 +1301,7 @@ static void ieee80211_set_associated(struct ieee80211_sub_if_data *sdata,
 	sdata->u.mgd.flags |= IEEE80211_STA_RESET_SIGNAL_AVE;
 
 	/* just to be sure */
-	sdata->u.mgd.flags &= ~(IEEE80211_STA_CONNECTION_POLL |
-				IEEE80211_STA_BEACON_POLL);
+	ieee80211_stop_poll(sdata);
 
 	ieee80211_led_assoc(local, 1);
 
@@ -1336,6 +1351,8 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 
 	if (WARN_ON(!ifmgd->associated))
 		return;
+
+	ieee80211_stop_poll(sdata);
 
 	memcpy(bssid, ifmgd->associated->bssid, ETH_ALEN);
 
@@ -1456,8 +1473,7 @@ static void ieee80211_reset_ap_probe(struct ieee80211_sub_if_data *sdata)
 		return;
 	}
 
-	ifmgd->flags &= ~(IEEE80211_STA_CONNECTION_POLL |
-			  IEEE80211_STA_BEACON_POLL);
+	__ieee80211_stop_poll(sdata);
 
 	mutex_lock(&local->iflist_mtx);
 	ieee80211_recalc_ps(local, -1);
@@ -1477,7 +1493,6 @@ static void ieee80211_reset_ap_probe(struct ieee80211_sub_if_data *sdata)
 		  round_jiffies_up(jiffies +
 				   IEEE80211_CONNECTION_IDLE_TIME));
 out:
-	ieee80211_run_deferred_scan(local);
 	mutex_unlock(&local->mtx);
 }
 
@@ -1522,6 +1537,8 @@ static void ieee80211_mgd_probe_ap_send(struct ieee80211_sub_if_data *sdata)
 	 * anymore. The timeout will be reset if the frame is ACKed by
 	 * the AP.
 	 */
+	ifmgd->probe_send_count++;
+
 	if (sdata->local->hw.flags & IEEE80211_HW_REPORTS_TX_ACK_STATUS) {
 		ifmgd->nullfunc_failed = false;
 		ieee80211_send_nullfunc(sdata->local, sdata, 0);
@@ -1538,7 +1555,6 @@ static void ieee80211_mgd_probe_ap_send(struct ieee80211_sub_if_data *sdata)
 					 0, (u32) -1, true, false);
 	}
 
-	ifmgd->probe_send_count++;
 	ifmgd->probe_timeout = jiffies + msecs_to_jiffies(probe_wait_ms);
 	run_again(ifmgd, ifmgd->probe_timeout);
 	if (sdata->local->hw.flags & IEEE80211_HW_REPORTS_TX_ACK_STATUS)
@@ -1567,9 +1583,9 @@ static void ieee80211_mgd_probe_ap(struct ieee80211_sub_if_data *sdata,
 	}
 
 #ifdef CONFIG_MAC80211_VERBOSE_DEBUG
-	if (beacon && net_ratelimit())
-		printk(KERN_DEBUG "%s: detected beacon loss from AP "
-		       "- sending probe request\n", sdata->name);
+	if (beacon)
+		net_dbg_ratelimited("%s: detected beacon loss from AP - sending probe request\n",
+				    sdata->name);
 #endif
 
 	/*
@@ -1776,7 +1792,7 @@ ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 
 	memcpy(bssid, ifmgd->auth_data->bss->bssid, ETH_ALEN);
 
-	if (compare_ether_addr(bssid, mgmt->bssid))
+	if (!ether_addr_equal(bssid, mgmt->bssid))
 		return RX_MGMT_NONE;
 
 	auth_alg = le16_to_cpu(mgmt->u.auth.auth_alg);
@@ -1853,7 +1869,7 @@ ieee80211_rx_mgmt_deauth(struct ieee80211_sub_if_data *sdata,
 		return RX_MGMT_NONE;
 
 	if (!ifmgd->associated ||
-	    compare_ether_addr(mgmt->bssid, ifmgd->associated->bssid))
+	    !ether_addr_equal(mgmt->bssid, ifmgd->associated->bssid))
 		return RX_MGMT_NONE;
 
 	bssid = ifmgd->associated->bssid;
@@ -1886,7 +1902,7 @@ ieee80211_rx_mgmt_disassoc(struct ieee80211_sub_if_data *sdata,
 		return RX_MGMT_NONE;
 
 	if (!ifmgd->associated ||
-	    compare_ether_addr(mgmt->bssid, ifmgd->associated->bssid))
+	    !ether_addr_equal(mgmt->bssid, ifmgd->associated->bssid))
 		return RX_MGMT_NONE;
 
 	reason_code = le16_to_cpu(mgmt->u.disassoc.reason_code);
@@ -2113,7 +2129,7 @@ ieee80211_rx_mgmt_assoc_resp(struct ieee80211_sub_if_data *sdata,
 
 	if (!assoc_data)
 		return RX_MGMT_NONE;
-	if (compare_ether_addr(assoc_data->bss->bssid, mgmt->bssid))
+	if (!ether_addr_equal(assoc_data->bss->bssid, mgmt->bssid))
 		return RX_MGMT_NONE;
 
 	/*
@@ -2193,8 +2209,7 @@ static void ieee80211_rx_bss_info(struct ieee80211_sub_if_data *sdata,
 	bool need_ps = false;
 
 	if (sdata->u.mgd.associated &&
-	    compare_ether_addr(mgmt->bssid, sdata->u.mgd.associated->bssid)
-	    == 0) {
+	    ether_addr_equal(mgmt->bssid, sdata->u.mgd.associated->bssid)) {
 		bss = (void *)sdata->u.mgd.associated->priv;
 		/* not previously set so we may need to recalc */
 		need_ps = !bss->dtim_period;
@@ -2249,7 +2264,7 @@ static void ieee80211_rx_mgmt_probe_resp(struct ieee80211_sub_if_data *sdata,
 
 	ASSERT_MGD_MTX(ifmgd);
 
-	if (compare_ether_addr(mgmt->da, sdata->vif.addr))
+	if (!ether_addr_equal(mgmt->da, sdata->vif.addr))
 		return; /* ignore ProbeResp to foreign address */
 
 	baselen = (u8 *) mgmt->u.probe_resp.variable - (u8 *) mgmt;
@@ -2262,12 +2277,11 @@ static void ieee80211_rx_mgmt_probe_resp(struct ieee80211_sub_if_data *sdata,
 	ieee80211_rx_bss_info(sdata, mgmt, len, rx_status, &elems, false);
 
 	if (ifmgd->associated &&
-	    compare_ether_addr(mgmt->bssid, ifmgd->associated->bssid) == 0)
+	    ether_addr_equal(mgmt->bssid, ifmgd->associated->bssid))
 		ieee80211_reset_ap_probe(sdata);
 
 	if (ifmgd->auth_data && !ifmgd->auth_data->bss->proberesp_ies &&
-	    compare_ether_addr(mgmt->bssid, ifmgd->auth_data->bss->bssid)
-	    == 0) {
+	    ether_addr_equal(mgmt->bssid, ifmgd->auth_data->bss->bssid)) {
 		/* got probe response, continue with auth */
 		printk(KERN_DEBUG "%s: direct probe responded\n", sdata->name);
 		ifmgd->auth_data->tries = 0;
@@ -2324,8 +2338,7 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 		return;
 
 	if (ifmgd->assoc_data && !ifmgd->assoc_data->have_beacon &&
-	    compare_ether_addr(mgmt->bssid, ifmgd->assoc_data->bss->bssid)
-	    == 0) {
+	    ether_addr_equal(mgmt->bssid, ifmgd->assoc_data->bss->bssid)) {
 		ieee802_11_parse_elems(mgmt->u.beacon.variable,
 				       len - baselen, &elems);
 
@@ -2340,7 +2353,7 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 	}
 
 	if (!ifmgd->associated ||
-	    compare_ether_addr(mgmt->bssid, ifmgd->associated->bssid))
+	    !ether_addr_equal(mgmt->bssid, ifmgd->associated->bssid))
 		return;
 	bssid = ifmgd->associated->bssid;
 
@@ -2407,12 +2420,14 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 
 	if (ifmgd->flags & IEEE80211_STA_BEACON_POLL) {
 #ifdef CONFIG_MAC80211_VERBOSE_DEBUG
-		if (net_ratelimit()) {
-			printk(KERN_DEBUG "%s: cancelling probereq poll due "
-			       "to a received beacon\n", sdata->name);
-		}
+		net_dbg_ratelimited("%s: cancelling probereq poll due to a received beacon\n",
+				    sdata->name);
 #endif
+		mutex_lock(&local->mtx);
 		ifmgd->flags &= ~IEEE80211_STA_BEACON_POLL;
+		ieee80211_run_deferred_scan(local);
+		mutex_unlock(&local->mtx);
+
 		mutex_lock(&local->iflist_mtx);
 		ieee80211_recalc_ps(local, -1);
 		mutex_unlock(&local->iflist_mtx);
@@ -2598,9 +2613,6 @@ static void ieee80211_sta_connection_lost(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	u8 frame_buf[DEAUTH_DISASSOC_LEN];
-
-	ifmgd->flags &= ~(IEEE80211_STA_CONNECTION_POLL |
-			  IEEE80211_STA_BEACON_POLL);
 
 	ieee80211_set_disassoc(sdata, IEEE80211_STYPE_DEAUTH, reason,
 			       false, frame_buf);
@@ -2878,8 +2890,7 @@ static void ieee80211_restart_sta_timer(struct ieee80211_sub_if_data *sdata)
 	u32 flags;
 
 	if (sdata->vif.type == NL80211_IFTYPE_STATION) {
-		sdata->u.mgd.flags &= ~(IEEE80211_STA_BEACON_POLL |
-					IEEE80211_STA_CONNECTION_POLL);
+		__ieee80211_stop_poll(sdata);
 
 		/* let's probe the connection once */
 		flags = sdata->local->hw.flags;
@@ -2948,7 +2959,10 @@ void ieee80211_sta_restart(struct ieee80211_sub_if_data *sdata)
 	if (test_and_clear_bit(TMR_RUNNING_CHANSW, &ifmgd->timers_running))
 		add_timer(&ifmgd->chswitch_timer);
 	ieee80211_sta_reset_beacon_monitor(sdata);
+
+	mutex_lock(&sdata->local->mtx);
 	ieee80211_restart_sta_timer(sdata);
+	mutex_unlock(&sdata->local->mtx);
 }
 #endif
 
@@ -3110,7 +3124,7 @@ static int ieee80211_prep_connection(struct ieee80211_sub_if_data *sdata,
 	}
 
 	local->oper_channel = cbss->channel;
-	ieee80211_hw_config(local, 0);
+	ieee80211_hw_config(local, IEEE80211_CONF_CHANGE_CHANNEL);
 
 	if (!have_sta) {
 		u32 rates = 0, basic_rates = 0;
@@ -3166,7 +3180,7 @@ static int ieee80211_prep_connection(struct ieee80211_sub_if_data *sdata,
 			return err;
 		}
 	} else
-		WARN_ON_ONCE(compare_ether_addr(ifmgd->bssid, cbss->bssid));
+		WARN_ON_ONCE(!ether_addr_equal(ifmgd->bssid, cbss->bssid));
 
 	return 0;
 }
@@ -3306,7 +3320,7 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 		bool match;
 
 		/* keep sta info, bssid if matching */
-		match = compare_ether_addr(ifmgd->bssid, req->bss->bssid) == 0;
+		match = ether_addr_equal(ifmgd->bssid, req->bss->bssid);
 		ieee80211_destroy_auth_data(sdata, match);
 	}
 
@@ -3466,7 +3480,7 @@ int ieee80211_mgd_deauth(struct ieee80211_sub_if_data *sdata,
 	       sdata->name, req->bssid, req->reason_code);
 
 	if (ifmgd->associated &&
-	    compare_ether_addr(ifmgd->associated->bssid, req->bssid) == 0)
+	    ether_addr_equal(ifmgd->associated->bssid, req->bssid))
 		ieee80211_set_disassoc(sdata, IEEE80211_STYPE_DEAUTH,
 				       req->reason_code, true, frame_buf);
 	else

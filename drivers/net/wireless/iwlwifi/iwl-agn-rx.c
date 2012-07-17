@@ -759,7 +759,12 @@ static void iwlagn_pass_packet_to_mac80211(struct iwl_priv *priv,
 		IWL_ERR(priv, "alloc_skb failed\n");
 		return;
 	}
-	hdrlen = min_t(unsigned int, len, skb_tailroom(skb));
+	/* If frame is small enough to fit in skb->head, pull it completely.
+	 * If not, only pull ieee80211_hdr so that splice() or TCP coalesce
+	 * are more efficient.
+	 */
+	hdrlen = (len <= skb_tailroom(skb)) ? len : sizeof(*hdr);
+
 	memcpy(skb_put(skb, hdrlen), hdr, hdrlen);
 	fraglen = len - hdrlen;
 
@@ -780,8 +785,8 @@ static void iwlagn_pass_packet_to_mac80211(struct iwl_priv *priv,
 	*/
 	if (unlikely(ieee80211_is_beacon(fc) && priv->passive_no_rx)) {
 		for_each_context(priv, ctx) {
-			if (compare_ether_addr(hdr->addr3,
-					       ctx->active.bssid_addr))
+			if (!ether_addr_equal(hdr->addr3,
+					      ctx->active.bssid_addr))
 				continue;
 			iwlagn_lift_passive_no_rx(priv);
 		}

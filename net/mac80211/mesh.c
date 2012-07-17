@@ -109,8 +109,10 @@ bool mesh_matches_local(struct ieee80211_sub_if_data *sdata,
 
 	/* Disallow HT40+/- mismatch */
 	if (ie->ht_operation &&
-	    local->_oper_channel_type > NL80211_CHAN_HT20 &&
-	    sta_channel_type > NL80211_CHAN_HT20 &&
+	    (local->_oper_channel_type == NL80211_CHAN_HT40MINUS ||
+	    local->_oper_channel_type == NL80211_CHAN_HT40PLUS) &&
+	    (sta_channel_type == NL80211_CHAN_HT40MINUS ||
+	     sta_channel_type == NL80211_CHAN_HT40PLUS) &&
 	    local->_oper_channel_type != sta_channel_type)
 		goto mismatch;
 
@@ -215,7 +217,7 @@ int mesh_rmc_check(u8 *sa, struct ieee80211s_hdr *mesh_hdr,
 			kmem_cache_free(rm_cache, p);
 			--entries;
 		} else if ((seqnum == p->seqnum) &&
-			   (compare_ether_addr(sa, p->sa) == 0))
+			   (ether_addr_equal(sa, p->sa)))
 			return -1;
 	}
 
@@ -649,7 +651,7 @@ static void ieee80211_mesh_rx_bcn_presp(struct ieee80211_sub_if_data *sdata,
 
 	/* ignore ProbeResp to foreign address */
 	if (stype == IEEE80211_STYPE_PROBE_RESP &&
-	    compare_ether_addr(mgmt->da, sdata->vif.addr))
+	    !ether_addr_equal(mgmt->da, sdata->vif.addr))
 		return;
 
 	baselen = (u8 *) mgmt->u.probe_resp.variable - (u8 *) mgmt;

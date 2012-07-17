@@ -76,6 +76,8 @@ static void wl1251_spi_reset(struct wl1251 *wl)
 	spi_sync(wl_to_spi(wl), &m);
 
 	wl1251_dump(DEBUG_SPI, "spi reset -> ", cmd, WSPI_INIT_CMD_LEN);
+
+	kfree(cmd);
 }
 
 static void wl1251_spi_wake(struct wl1251 *wl)
@@ -130,6 +132,8 @@ static void wl1251_spi_wake(struct wl1251 *wl)
 	spi_sync(wl_to_spi(wl), &m);
 
 	wl1251_dump(DEBUG_SPI, "spi init -> ", cmd, WSPI_INIT_CMD_LEN);
+
+	kfree(cmd);
 }
 
 static void wl1251_spi_reset_wake(struct wl1251 *wl)
@@ -284,6 +288,7 @@ static int __devinit wl1251_spi_probe(struct spi_device *spi)
 
 	wl->use_eeprom = pdata->use_eeprom;
 
+	irq_set_status_flags(wl->irq, IRQ_NOAUTOEN);
 	ret = request_irq(wl->irq, wl1251_irq, 0, DRIVER_NAME, wl);
 	if (ret < 0) {
 		wl1251_error("request_irq() failed: %d", ret);
@@ -291,8 +296,6 @@ static int __devinit wl1251_spi_probe(struct spi_device *spi)
 	}
 
 	irq_set_irq_type(wl->irq, IRQ_TYPE_EDGE_RISING);
-
-	disable_irq(wl->irq);
 
 	ret = wl1251_init_ieee80211(wl);
 	if (ret)
