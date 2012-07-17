@@ -1,3 +1,12 @@
+compat-wireless (3.5-rc5-1~genesi1) unstable; urgency=low
+
+  * debian/control: change Section to kernel
+  * Removed auto-generated patch from initial import (there is no need
+    for
+  * Imported Upstream version 3.5-rc5-1
+
+ -- William Schaub <wschaub@genesi-tech.com>  Mon, 16 Jul 2012 22:27:42 -0400
+
 compat-wireless (2012.05.10-1) unstable; urgency=low
 
   * Initial release with only the ralink drivers enabled.
