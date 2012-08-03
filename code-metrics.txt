@@ -1,16 +1,28 @@
 
 [36mcompat-wireless code metrics[00m
 
-[35m    838316[00m - Total upstream lines of code being pulled
+[35m    838358[00m - Total upstream lines of code being pulled
 [01;32m      2929[00m - backport code changes
 [01;32m      2452[00m - backport code additions
 [01;32m       477[00m - backport code deletions
-[01;32m     11212[00m - backport from compat module
-[01;32m     14141[00m - total backport code
-[31m    1.6868[00m - % of code consists of backport work
+[01;32m     11203[00m - backport from compat module
+[01;32m     14132[00m - total backport code
+[31m    1.6857[00m - % of code consists of backport work
+[01;33m       132[00m - Code changes brought in from pending-stable
+[01;33m        63[00m - Code additions brought in from pending-stable
+[01;33m        69[00m - Code deletions brought in from pending-stable
+[31m    0.0157[00m - % of code being cherry picked from pending-stable
+[01;33m      9943[00m - Code changes brought in from linux-next
+[01;33m      3772[00m - Code additions brought in from linux-next
+[01;33m      6171[00m - Code deletions brought in from linux-next
+[31m    1.1860[00m - % of code being cherry picked from linux-next
+[31m     13437[00m - Crap changes not yet posted
+[31m     13410[00m - Crap additions not yet posted
+[31m        27[00m - Crap deletions not yet posted
+[31m    1.6028[00m - % of crap code
 
 Base tree: [01;32mlinux-stable.git[00m
-Base tree version: [35mv3.5-rc5[00m
-compat.git: [36mcompat-v3.5-rc3-1[00m
-compat-wireless release: [01;33mcompat-wireless-3.5-rc5-1[00m
+Base tree version: [35mv3.5[00m
+compat.git: [36mcompat-v3.5-1[00m
+compat-wireless release: [01;33mcompat-wireless-v3.5-1-snpc[00m
 Code metrics archive: [01;32mhttp://bit.ly/H6BTF7[00m
