@@ -3,4 +3,9 @@ compat-wireless for Debian
 
 This is a pretty standard install of compat-wireless in Debian package form
 no configuration should be necessary after installing the package.
- -- William Schaub <william.schaub@genesi-usa.com>  Thu, 07 Jun 2012 21:49:59 -0400
+
+ You might want to update your firmware (after backing up your old firmware files, in case you want to revert to the staging driver which likes older firmware.) by installing firmware-ralink or 
+ grabbing the rt*.bin files from 
+ git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git 
+
+ -- William Schaub <wschaub@genesi-tech.com>  Thu, 05 Aug 2012 14:07:19 -0400
