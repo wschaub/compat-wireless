@@ -1,3 +1,13 @@
+compat-wireless (3.5-1spnc~genesi2) unstable; urgency=low
+
+  * Imported Upstream version 3.5-1spnc
+  * Add patch to get rid of exposed irq_to_desc symbol
+  * disable hardware encryption.
+  * Add info about where to get up to date firmware and a caution to
+    backup
+
+ -- William Schaub <wschaub@genesi-tech.com>  Sun, 05 Aug 2012 16:41:06 -0400
+
 compat-wireless (3.5-rc5-1~genesi1) unstable; urgency=low
 
   * debian/control: change Section to kernel
