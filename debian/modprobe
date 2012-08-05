@@ -1,3 +1,6 @@
 #Make sure we don't load the old 2.6.31 wireless driver for the Efika MX
 #when we boot
 blacklist rt2870sta
+#Disable hardware encryption. for some reason
+#we dis-associate more often with hardware encryption.
+options rt2800usb nohwcrypt=1
